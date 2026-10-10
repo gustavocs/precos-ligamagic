@@ -19,7 +19,7 @@ issue neste repositório para conversarmos.
 
 ## Instalação
 
-1. Baixe o repositório (Code → Download ZIP) e descompacte.
+1. Baixe o .zip do último release em [releases](https://github.com/gustavocs/precos-ligamagic/releases) e descompacte.
 2. Abra `chrome://extensions` e ative o **Modo do desenvolvedor**.
 3. Clique em **Carregar sem compactação** e selecione a pasta que contém o `manifest.json`.
 4. Abra a LigaMagic uma vez numa aba normal.
@@ -60,9 +60,8 @@ armazenamento local da extensão.
 ## Limitações conhecidas
 
 - Decks privados do Moxfield não são suportados.
-- O painel não se atualiza sozinho ao editar o deck: clique em **Recalcular**.
-- Mudanças no layout da LigaMagic ou do Moxfield podem quebrar a extensão até uma
-  atualização.
+- O painel não se atualiza sozinho ao editar o deck (por exemplo ao mudar cartas do sideboard para o main deck): clique em **Recalcular**.
+- Mudanças no layout da LigaMagic ou na API do Moxfield podem quebrar a extensão até uma atualização.
 
 ## Desenvolvimento
 
