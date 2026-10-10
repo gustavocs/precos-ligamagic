@@ -202,6 +202,27 @@ var LigaPrecos = (() => {
     return /\bBasic\b/.test(card.type_line || "") && /\bLand\b/.test(card.type_line || "");
   }
 
+  // ---------- Validade do cache ----------
+  // A LigaMagic atualiza os preços uma vez por dia, então o preço guardado vale até a
+  // próxima virada do dia (horário de Brasília), não por um número fixo de horas.
+  // rolloverHour permite mover a virada (ex.: 3 = o "dia" da Liga começa às 3h).
+  const BRT_DAY = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit",
+  });
+
+  // "2026-10-09": o dia de preços ao qual o instante ts pertence.
+  function priceDay(ts, rolloverHour = 0) {
+    return BRT_DAY.format(new Date(ts - rolloverHour * 3600e3));
+  }
+
+  // Entrada do cache { prices, ts } ainda vale? "Não encontrada" vence antes (missingTtlMs),
+  // porque pode ter sido um erro passageiro.
+  function isCacheFresh(entry, now, { rolloverHour = 0, missingTtlMs = 6 * 3600e3 } = {}) {
+    if (!entry) return false;
+    if (priceDay(entry.ts, rolloverHour) !== priceDay(now, rolloverHour)) return false;
+    return entry.prices ? true : now - entry.ts < missingTtlMs;
+  }
+
   // Boards do Moxfield que a extensão considera (maybeboard e afins ficam de fora).
   const BOARDS = { mainboard: "main", companions: "companion", commanders: "commander", sideboard: "side" };
 
@@ -270,7 +291,7 @@ var LigaPrecos = (() => {
     parseBRL, pricesFromHTML, findEditions, pricesFromEditions, extractPrices,
     firstListingEdition, matchEdition, analyzeCardPage, isChallengePage, ligaUrl,
     deckIdFromPath, moxfieldDeckApi, lookupNames, isBasicLand,
-    flattenDeck, isCounted, isPriced, computeTotal,
+    flattenDeck, isCounted, isPriced, computeTotal, priceDay, isCacheFresh,
   };
 })();
 

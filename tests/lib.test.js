@@ -99,6 +99,25 @@ test("nomes de busca para dupla-face e split", () => {
   assert.deepEqual(L.lookupNames({ name: "Fire // Ice", layout: "split" }), ["Fire // Ice", "Fire"]);
 });
 
+test("cache vence na virada do dia (horário de Brasília), não em 24h", () => {
+  const t = (iso) => Date.parse(iso);
+  const found = (iso) => ({ prices: { min: 1 }, ts: t(iso) });
+  // 23h48 de Brasília = 02h48 UTC do dia seguinte
+  assert.equal(L.priceDay(t("2026-10-10T02:48:00Z")), "2026-10-09");
+  assert.equal(L.isCacheFresh(found("2026-10-10T02:48:00Z"), t("2026-10-10T02:59:00Z")), true);  // 23h59
+  assert.equal(L.isCacheFresh(found("2026-10-10T02:48:00Z"), t("2026-10-10T03:10:00Z")), false); // 0h10
+  // buscado às 8h, ainda vale às 23h do mesmo dia
+  assert.equal(L.isCacheFresh(found("2026-10-09T11:00:00Z"), t("2026-10-10T02:00:00Z")), true);
+  // com a virada às 3h, 0h10 ainda é o "dia" anterior
+  assert.equal(L.isCacheFresh(found("2026-10-10T02:48:00Z"), t("2026-10-10T03:10:00Z"), { rolloverHour: 3 }), true);
+  assert.equal(L.isCacheFresh(found("2026-10-10T02:48:00Z"), t("2026-10-10T06:10:00Z"), { rolloverHour: 3 }), false);
+  // "não encontrada" vence em 6h mesmo no mesmo dia
+  const missing = { prices: null, ts: t("2026-10-09T11:00:00Z") };
+  assert.equal(L.isCacheFresh(missing, t("2026-10-09T16:00:00Z")), true);
+  assert.equal(L.isCacheFresh(missing, t("2026-10-09T18:00:00Z")), false);
+  assert.equal(L.isCacheFresh(undefined, Date.now()), false);
+});
+
 const moxDeck = {
   name: "Teste",
   boards: {
