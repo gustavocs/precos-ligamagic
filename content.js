@@ -817,10 +817,12 @@
     ${ROW_SEL} [data-lm-price] > a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     ${ROW_SEL} [data-lm-price]::after {
       content: attr(data-lm-price); flex-shrink: 0; white-space: nowrap;
-      font-size: .85em; font-variant-numeric: tabular-nums; color: #c99a1e;
+      margin-left: auto; padding-right: 10px; /* coluna à direita, antes do custo de mana */
+      font-size: calc(.85em + 1px); font-variant-numeric: tabular-nums; color: #1a1a1a;
     }
+    html.darkmode ${ROW_SEL} [data-lm-price]::after { color: #f0f0f0; } /* tema escuro do Moxfield */
     ${ROW_SEL} [data-lm-kind=out]::after { opacity: .55; }
-    ${ROW_SEL} [data-lm-kind=missing]::after { color: #e05a5a; }
+    html ${ROW_SEL} [data-lm-price][data-lm-kind=missing]::after { color: #e05a5a; } /* vence nos dois temas */
   `;
 
   // ---------- navegação (o Moxfield é uma SPA) ----------

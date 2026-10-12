@@ -45,8 +45,9 @@ issue neste repositório para conversarmos.
 - Ordenação por maior preço (padrão), menor preço ou nome.
 - ✎ em cada carta para informar um preço manual, que tem prioridade sobre a LigaMagic.
 - **Preços na lista do Moxfield**: mostra o preço de cada carta ao lado do nome, na própria
-  lista do deck, com o mesmo critério e as mesmas regras do painel (quantidade da linha,
-  sideboard e comandante mais apagados quando estão fora do total, "sem preço" em vermelho).
+  lista do deck, alinhado à direita antes do custo de mana, com o mesmo critério e as mesmas
+  regras do painel (quantidade da linha, sideboard e comandante mais apagados quando estão
+  fora do total, "sem preço" em vermelho). Acompanha o tema claro ou escuro do Moxfield.
   Funciona só na visualização em texto do Moxfield (**View** → **Text** ou **Condensed
   Text**); em outra visualização, o painel avisa.
 - Cartas marcadas com "conferir" merecem uma olhada na página da LigaMagic: passe o mouse

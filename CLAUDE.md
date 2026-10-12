@@ -85,7 +85,8 @@ outra visualização, as etiquetas somem e o painel mostra `.inline-note` pedind
 - **Não criar elementos dentro da árvore do React.** O preço vai no atributo
   `data-lm-price` (e `data-lm-kind`: `counted`, `out`, `missing`) do elemento pai do link,
   e aparece por CSS `::after` (`INLINE_CSS`, injetado na página como
-  `#precos-ligamagic-inline`). Quando o React recria a linha, o atributo some e o
+  `#precos-ligamagic-inline`; texto escuro, com variante para `html.darkmode`, o tema escuro
+  do Moxfield). Quando o React recria a linha, o atributo some e o
   `MutationObserver` em `document.body` marca de novo (`scheduleInline`, 150 ms de folga,
   porque anúncios mexem no DOM o tempo todo).
 - `syncInline()` roda a cada `render()`: liga/desliga o observer e reaplica. Regra da
