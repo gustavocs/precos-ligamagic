@@ -818,10 +818,12 @@
     ${ROW_SEL} [data-lm-price]::after {
       content: attr(data-lm-price); flex-shrink: 0; white-space: nowrap;
       margin-left: auto; padding-right: 10px; /* coluna à direita, antes do custo de mana */
-      font-size: 13px; font-variant-numeric: tabular-nums; color: #555; /* nome da carta: #333 */
+      font-size: 13px; font-variant-numeric: tabular-nums; color: #444; /* nome da carta: #333 */
     }
-    html.darkmode ${ROW_SEL} [data-lm-price]::after { color: #b8b8b8; } /* tema escuro do Moxfield (nome: #ddd) */
-    ${ROW_SEL} [data-lm-kind=out]::after { opacity: .55; }
+    html.darkmode ${ROW_SEL} [data-lm-price]::after { color: #c6c6c6; } /* tema escuro do Moxfield (nome: #ddd) */
+    /* fora do total (sideboard, comandante): mais apagado */
+    html ${ROW_SEL} [data-lm-price][data-lm-kind=out]::after { color: #808080; }
+    html.darkmode ${ROW_SEL} [data-lm-price][data-lm-kind=out]::after { color: #8c8c8c; }
     html ${ROW_SEL} [data-lm-price][data-lm-kind=missing]::after { color: #e05a5a; } /* vence nos dois temas */
   `;
 
