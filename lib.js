@@ -120,9 +120,53 @@ var LigaPrecos = (() => {
     );
   }
 
+  // ---------- Página em grade (cartas com muitas reimpressões) ----------
+  // Para cartas como Duress ou Shock, a Liga não mostra o marketplace: a página é uma grade
+  // de edições, alimentada por
+  //   var cardsjson = [{"sSigla":"m20","nEN":"Duress","nPT":"Coagir","p1a":"0.06","p1b":"0.55","p1c":"1.58",...},
+  //                    {"sSigla":"arena","nEN":"Duress","p1a":"999.00",...},
+  //                    {"nEN":"Duress (#7b)",...}, {"nEN":"Duress-SB (CR-02)",...}]
+  // p1a = menor, p1b = médio, p1c = maior, por edição. "0.00" = sem oferta.
+  function findCardsGrid(html) {
+    const m = /\bcardsjson\s*=\s*\[/.exec(html || "");
+    if (!m) return null;
+    const chunk = sliceBalanced(html, html.indexOf("[", m.index));
+    try {
+      const arr = chunk && JSON.parse(chunk);
+      return Array.isArray(arr) && arr.some((e) => e && "p1a" in e) ? arr : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Menor valor por critério entre as edições da grade. Só entradas com o nome exato
+  // buscado: variações como "Duress (#7b)" ou "Duress-SB (CR-02)" são outras cartas na Liga.
+  function pricesFromGrid(grid, name) {
+    const norm = (s) => String(s || "").trim().toLowerCase();
+    const exact = grid.filter((e) => norm(e.nEN) === norm(name));
+    const rows = exact.length ? exact : grid;
+    const asEditions = rows.map((e) => ({
+      name: e.sSigla ? String(e.sSigla).toUpperCase() : null,
+      price: { 0: { p: e.p1a, m: e.p1b, g: e.p1c } },
+    }));
+    const best = pricesFromEditions(asEditions);
+    if (!best) return null;
+    return {
+      ...best, source: "grid",
+      // Sem o nome exato na grade, os valores podem ser de uma variação: vale conferir.
+      ...(exact.length ? {} : { check: true }),
+      note: `A LigaMagic mostra esta carta como lista de edições (muitas reimpressões), sem as ofertas. ` +
+        `Menor preço entre ${best.editions} ${best.editions === 1 ? "edição" : "edições"}` +
+        (best.cheapestEdition ? `, em ${best.cheapestEdition}.` : "."),
+    };
+  }
+
   // Combina tudo para uma página de carta. root = Document já parseado do mesmo html.
-  // Devolve { prices, listingFound } — prices traz source e, se for o caso, check/note.
-  function analyzeCardPage(html, root) {
+  // name = nome buscado (usado na página em grade). Devolve { prices, listingFound, grid }
+  // — prices traz source e, se for o caso, check/note.
+  function analyzeCardPage(html, root, name = "") {
+    const grid = findCardsGrid(html);
+    if (grid) return { listingFound: false, grid: true, prices: pricesFromGrid(grid, name) };
     const editionsList = findEditions(html);
     const listing = firstListingEdition(root);
     if (!editionsList) {
@@ -325,6 +369,7 @@ var LigaPrecos = (() => {
   return {
     normName, indexDeck, findCard, inlineLabel,
     parseBRL, pricesFromHTML, findEditions, pricesFromEditions, extractPrices,
+    findCardsGrid, pricesFromGrid,
     firstListingEdition, matchEdition, analyzeCardPage, isChallengePage, ligaUrl,
     deckIdFromPath, moxfieldDeckApi, lookupNames, isBasicLand,
     flattenDeck, isCounted, isPriced, computeTotal, priceDay, isCacheFresh,

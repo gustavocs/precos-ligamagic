@@ -80,7 +80,7 @@
   // ---------- LigaMagic ----------
   // Edição da primeira oferta do marketplace + preço dessa edição no JSON.
   // Sem oferta listada: menor preço entre as edições. Sem JSON: blocos da página.
-  const analyze = (html) => L.analyzeCardPage(html, parseHTML(html));
+  const analyze = (html, name) => L.analyzeCardPage(html, parseHTML(html), name);
   let listingInRaw = null; // null = ainda não sabemos se a lista de ofertas vem no HTML cru
 
   async function fetchFromLiga(name) {
@@ -89,7 +89,9 @@
     if (fetchMode === "fetch") {
       const r = await send({ type: "fetchText", url });
       if (r && !r.error && r.status < 400 && !L.isChallengePage(r.text)) {
-        const raw = analyze(r.text);
+        const raw = analyze(r.text, name);
+        // Página em grade (muitas reimpressões): os preços já vêm no HTML cru, sem ofertas.
+        if (raw.grid) return { status: "ok", prices: raw.prices };
         if (raw.listingFound) {
           listingInRaw = true;
           return { status: "ok", prices: raw.prices };
@@ -99,7 +101,7 @@
         const t = await send({ type: "renderAndExtract", url });
         if (t?.status === "challenge") return { status: "challenge" };
         if (t?.status === "ok") {
-          const rendered = analyze(t.html);
+          const rendered = analyze(t.html, name);
           if (rendered.listingFound) {
             listingInRaw = false;
             fetchMode = "tab"; // daqui em diante, direto pela aba
@@ -114,7 +116,7 @@
     const r = await send({ type: "renderAndExtract", url });
     if (r?.error) throw new Error(r.error);
     if (r?.status === "challenge") return { status: "challenge" };
-    if (r?.status === "ok") return { status: "ok", prices: analyze(r.html).prices };
+    if (r?.status === "ok") return { status: "ok", prices: analyze(r.html, name).prices };
     return { status: "ok", prices: null };
   }
 

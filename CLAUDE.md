@@ -48,6 +48,15 @@ texto. Prioridade em `analyzeCardPage`:
 
 `check: true` vira a etiqueta "conferir" e `note` vira o tooltip.
 
+**Página em grade** (cartas com muitas reimpressões, ex.: Duress, Shock): a Liga não mostra
+marketplace nem `cards_editions`; a página é uma grade de edições alimentada por
+`var cardsjson = [...]`, com `p1a`/`p1b`/`p1c` (menor/médio/maior) por edição e `nEN` como
+nome. `analyzeCardPage(html, root, name)` detecta isso antes de tudo (`findCardsGrid`) e
+devolve `{ grid: true, prices: { source: "grid", ... } }`: menor valor por critério entre as
+entradas com `nEN` igual ao nome buscado (`pricesFromGrid`; variações como "Duress (#7b)" são
+outras cartas na Liga; `0.00` = sem oferta). Sem o nome exato, usa todas e marca `check`.
+Os dados vêm no HTML cru, então `fetchFromLiga` não abre a aba para essas cartas.
+
 **Modo de busca** (`fetchMode`): começa com `fetch` cru. Se cair no Cloudflare ou se a lista
 de ofertas só existir após o JavaScript, passa para `tab` (aba em segundo plano) até o fim da
 sessão. A aba é fechada com `releaseWorkerTab` ao terminar a fila.

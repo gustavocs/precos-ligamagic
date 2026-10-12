@@ -189,3 +189,56 @@ test("inlineLabel: preço da linha, fora do total, sem preço e sem etiqueta", (
   assert.equal(L.inlineLabel({ board: "main", isBasic: true }, entry, 1, s, fmt), null); // básico fora da conta
   assert.equal(L.inlineLabel(undefined, entry, 1, s, fmt), null);                      // carta fora do deck
 });
+
+// Página em grade da LigaMagic (cartas com muitas reimpressões, ex.: Duress), out/2026, reduzida.
+const gridPage = (entries) => `<html><head><title>Coagir | LigaMagic</title></head><body>
+<div id="card-editions"></div>
+<script>
+$(document).ready(function(){
+                    var cardsjson = ${JSON.stringify(entries)}; edc.raridade = [{"id": 1, "label": "C"},{"id": 2, "label": "U"}];
+});
+</script></body></html>`;
+const g = (nEN, sSigla, p1a, p1b, p1c) =>
+  ({ sSigla, precoMenor: p1a, precoMaior: p1c, id: 9650, nEN, nPT: "Coagir", sC: "B", pF: 0, p1a, p1b, p1c, idE: 1 });
+
+test("página em grade: menor preço entre as edições com o nome exato", () => {
+  const html = gridPage([
+    g("Duress", "us", "6.30", "23.69", "37.99"),
+    g("Duress", "arena", "999.00", "1306.07", "1399.90"),
+    g("Duress", "m20", "0.06", "0.55", "1.58"),
+    g("Duress", "sld409", "0.00", "0.00", "0.00"),       // sem oferta: ignorada
+    g("Duress (#7b)", "p7b", "0.01", "0.02", "0.03"),   // variação: outra carta na Liga
+    g("Duress-SB (CR-02)", "cr", "0.01", "0.02", "0.03"),
+  ]);
+  const res = L.analyzeCardPage(html, doc(html), "Duress");
+  assert.equal(res.grid, true);
+  assert.equal(res.listingFound, false);
+  assert.equal(res.prices.source, "grid");
+  assert.equal(res.prices.min, 0.06);
+  assert.equal(res.prices.medium, 0.55);
+  assert.equal(res.prices.max, 1.58);
+  assert.equal(res.prices.editions, 3);
+  assert.equal(res.prices.cheapestEdition, "M20");
+  assert.equal(res.prices.check, undefined);
+  assert.match(res.prices.note, /lista de edições/);
+});
+
+test("página em grade: sem o nome exato usa todas as entradas e marca conferir", () => {
+  const html = gridPage([g("Shock (BR-98)", "br", "2.00", "3.00", "4.00"), g("Shock (MLP-99)", "mlp", "1.00", "2.00", "3.00")]);
+  const res = L.analyzeCardPage(html, doc(html), "Shock");
+  assert.equal(res.prices.min, 1);
+  assert.equal(res.prices.check, true);
+});
+
+test("página em grade sem nenhum preço: prices null (vira 'sem preço')", () => {
+  const html = gridPage([g("Duress", "sld409", "0.00", "0.00", "0.00")]);
+  const res = L.analyzeCardPage(html, doc(html), "Duress");
+  assert.equal(res.grid, true);
+  assert.equal(res.prices, null);
+});
+
+test("página normal não é confundida com grade", () => {
+  const html = editionsScript() + listing;
+  assert.equal(L.findCardsGrid(html), null);
+  assert.equal(L.analyzeCardPage(html, doc(html), "Card").prices.source, "listing");
+});
