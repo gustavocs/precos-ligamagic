@@ -818,9 +818,9 @@
     ${ROW_SEL} [data-lm-price]::after {
       content: attr(data-lm-price); flex-shrink: 0; white-space: nowrap;
       margin-left: auto; padding-right: 10px; /* coluna à direita, antes do custo de mana */
-      font-size: calc(.85em + 1px); font-variant-numeric: tabular-nums; color: #1a1a1a;
+      font-size: 13px; font-variant-numeric: tabular-nums; color: #555; /* nome da carta: #333 */
     }
-    html.darkmode ${ROW_SEL} [data-lm-price]::after { color: #f0f0f0; } /* tema escuro do Moxfield */
+    html.darkmode ${ROW_SEL} [data-lm-price]::after { color: #b8b8b8; } /* tema escuro do Moxfield (nome: #ddd) */
     ${ROW_SEL} [data-lm-kind=out]::after { opacity: .55; }
     html ${ROW_SEL} [data-lm-price][data-lm-kind=missing]::after { color: #e05a5a; } /* vence nos dois temas */
   `;
