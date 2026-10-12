@@ -55,7 +55,7 @@ sessão. A aba é fechada com `releaseWorkerTab` ao terminar a fila.
 ## Armazenamento (`chrome.storage.local`)
 
 - `settings`: critério, limite, ordenação, recolhido, includeBasics/Commanders/Sideboard,
-  `autoSync`, `pos` (`{ h, v, x, y }`: canto ao qual o painel está preso + distância) e
+  `autoSync`, `inlinePrices`, `pos` (`{ h, v, x, y }`: canto ao qual o painel está preso + distância) e
   `size` (`{ w, h }`). `null` em `pos`/`size` = padrão (canto inferior direito, tamanho automático).
 - `overrides`: preço manual por nome de carta (por unidade; tem prioridade sobre a Liga).
 - `lm4:<nome em minúsculas>`: cache `{ prices, ts }`. Preço encontrado vale até a virada do
@@ -66,7 +66,30 @@ sessão. A aba é fechada com `releaseWorkerTab` ao terminar a fila.
   passam a ser ignoradas e `clearCache` apaga qualquer `lm\d*:`. Não é preciso trocar o
   prefixo a cada versão: só quando o formato mudar.
 - `deck:<publicId>`: `{ deck, ts }`, a lista de cartas (`flattenDeck`) salva em cada
-  `run()`. Guarda os 50 mais recentes. `clearCache` não apaga.
+  `run()`. Guarda os 50 mais recentes. `clearCache` não apaga. Snapshots anteriores à
+  opção de preços na lista não têm `ids` nas cartas (ver abaixo).
+
+## Preços na lista do Moxfield (`settings.inlinePrices`)
+
+Mostra o preço ao lado de cada nome na lista do deck, fora do painel. Só na visualização
+em texto: `select#viewMode` com `table` (Text) ou `condensedTable` (Condensed Text). Em
+outra visualização, as etiquetas somem e o painel mostra `.inline-note` pedindo para trocar.
+
+- Linha do Moxfield: `li[data-testid="deck-view-table-row"]`, com `data-hash` = `card.id`
+  da API (id da impressão) e o nome em `a.table-deck-row-link[href^="/cards/"]`. A primeira
+  coluna da linha é a quantidade. Classes com hash (ex.: `XIi4jFys...`) mudam a cada
+  deploy do Moxfield: não usar.
+- A carta do deck é achada por `L.findCard`: pelo `data-hash` (`card.ids`, guardado por
+  `flattenDeck`) e, se não achar, pelo nome do link. O id é necessário para impressões com
+  nome alternativo (Valakut aparece como "Volcano of Roku's Island").
+- **Não criar elementos dentro da árvore do React.** O preço vai no atributo
+  `data-lm-price` (e `data-lm-kind`: `counted`, `out`, `missing`) do elemento pai do link,
+  e aparece por CSS `::after` (`INLINE_CSS`, injetado na página como
+  `#precos-ligamagic-inline`). Quando o React recria a linha, o atributo some e o
+  `MutationObserver` em `document.body` marca de novo (`scheduleInline`, 150 ms de folga,
+  porque anúncios mexem no DOM o tempo todo).
+- `syncInline()` roda a cada `render()`: liga/desliga o observer e reaplica. Regra da
+  etiqueta em `L.inlineLabel` (mesmas regras do painel: `isPriced`/`isCounted`).
 
 ## Convenções
 

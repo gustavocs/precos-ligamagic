@@ -19,6 +19,7 @@
     criterion: "min", limit: 500, collapsed: false, sort: "priceDesc",
     includeBasics: false, includeCommanders: false, includeSideboard: false,
     autoSync: false, // false = só busca preços ao clicar em "Buscar preços"
+    inlinePrices: false, // preço ao lado de cada nome na lista do Moxfield (visualização em texto)
     pos: null,       // { h: "left"|"right", v: "top"|"bottom", x, y } — null = canto padrão
     size: null,      // { w, h } — null = tamanho automático
   };
@@ -457,6 +458,7 @@
     if (!host) return;
     renderPanel();
     if (!drag) applyLayout(); // durante o arraste, a posição é controlada pelo ponteiro
+    syncInline();
   }
 
   const HEADER = `
@@ -550,7 +552,9 @@
         </label>
         ${deckOptions(state.deck)}
         ${checkbox("autoSync", "Buscar ao abrir decks")}
+        ${checkbox("inlinePrices", "Preços na lista do Moxfield")}
       </div>
+      <p class="note inline-note" hidden>Os preços na lista só aparecem na visualização em texto. No Moxfield, mude <strong>View</strong> para <strong>Text</strong> ou <strong>Condensed Text</strong>.</p>
       <div class="actions">
         <button data-action="refresh">Recalcular</button>
         <button data-action="clear" class="quiet">Limpar cache</button>
@@ -596,6 +600,8 @@
           ? `Passou ${brl.format(total - limit)} do limite de ${brl.format(limit)}`
           : `Sobram ${brl.format(limit - total)} do limite de ${brl.format(limit)}`;
       }
+
+      updateInlineNote();
 
       const status = $(".status");
       status.classList.toggle("alert", state.phase === "challenge" || state.phase === "error");
@@ -716,6 +722,106 @@
     // Contar comandante/sideboard/básicos pode exigir preços que ainda não foram buscados.
     if (key.startsWith("include")) priceMissing();
   }
+
+  // ---------- preços na lista do Moxfield ----------
+  // Só na visualização em texto (Text / Condensed Text), onde cada carta é uma linha
+  // li[data-testid="deck-view-table-row"]. O preço vai num atributo do elemento que contém
+  // o nome e aparece por CSS (::after): nenhum elemento novo dentro da árvore do React, e
+  // quando o Moxfield redesenha a linha, o observer marca de novo.
+  const ROW_SEL = 'li[data-testid="deck-view-table-row"]';
+  const NAME_SEL = 'a.table-deck-row-link[href^="/cards/"]';
+  const TEXT_VIEWS = ["table", "condensedTable"]; // valores de select#viewMode
+  let inlineObserver = null, inlineTimer = 0, inlineIndex = null, inlineIndexDeck = null;
+
+  // "text", "other" (grade, pilhas…) ou "unknown" (seletor ainda não apareceu).
+  function moxfieldView() {
+    const sel = document.getElementById("viewMode");
+    if (sel?.value) return TEXT_VIEWS.includes(sel.value) ? "text" : "other";
+    return document.querySelector(ROW_SEL) ? "text" : "unknown";
+  }
+
+  const inlineWanted = () => !!(settings.inlinePrices && state.deckId);
+
+  function updateInlineNote(view = moxfieldView()) {
+    const note = shadow?.querySelector(".inline-note");
+    if (note) note.hidden = !(settings.inlinePrices && view === "other");
+  }
+
+  // Liga ou desliga o observer conforme a opção; chamado a cada render.
+  function syncInline() {
+    if (inlineWanted()) {
+      if (!inlineObserver) {
+        inlineObserver = new MutationObserver(scheduleInline);
+        inlineObserver.observe(document.body, { childList: true, subtree: true });
+      }
+      scheduleInline();
+    } else if (inlineObserver) {
+      inlineObserver.disconnect();
+      inlineObserver = null;
+      clearInline();
+    }
+  }
+
+  // O Moxfield (e os anúncios) mexem muito no DOM: junta as mudanças e aplica uma vez.
+  function scheduleInline() {
+    if (!inlineTimer) inlineTimer = setTimeout(applyInline, 150);
+  }
+
+  function setAttr(el, name, value) {
+    if (value == null) el.removeAttribute(name);
+    else if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+  }
+
+  function clearInline() {
+    for (const el of document.querySelectorAll("[data-lm-price]")) {
+      el.removeAttribute("data-lm-price");
+      el.removeAttribute("data-lm-kind");
+    }
+  }
+
+  function applyInline() {
+    inlineTimer = 0;
+    const view = moxfieldView();
+    updateInlineNote(view);
+    if (!inlineWanted() || !state.deck || view === "other") { clearInline(); return; }
+    ensureInlineStyle();
+    if (inlineIndexDeck !== state.deck) {
+      inlineIndex = L.indexDeck(state.deck.cards);
+      inlineIndexDeck = state.deck;
+    }
+    const merged = effectivePrices();
+    for (const row of document.querySelectorAll(ROW_SEL)) {
+      const link = row.querySelector(NAME_SEL);
+      const cell = link?.parentElement;
+      if (!cell || cell === row) continue;
+      const card = L.findCard(inlineIndex, row.dataset.hash, link.textContent);
+      // Primeira coluna da linha = quantidade.
+      const qty = parseInt(row.firstElementChild?.textContent, 10) || card?.quantity || 1;
+      const label = card ? L.inlineLabel(card, merged[card.name], qty, settings, brl.format) : null;
+      setAttr(cell, "data-lm-price", label?.text);
+      setAttr(cell, "data-lm-kind", label?.kind);
+    }
+  }
+
+  // Estilo na página (fora do Shadow DOM), restrito às linhas marcadas.
+  function ensureInlineStyle() {
+    if (document.getElementById("precos-ligamagic-inline")) return;
+    const style = document.createElement("style");
+    style.id = "precos-ligamagic-inline";
+    style.textContent = INLINE_CSS;
+    document.head.appendChild(style);
+  }
+
+  const INLINE_CSS = `
+    ${ROW_SEL} [data-lm-price] { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+    ${ROW_SEL} [data-lm-price] > a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    ${ROW_SEL} [data-lm-price]::after {
+      content: attr(data-lm-price); flex-shrink: 0; white-space: nowrap;
+      font-size: .85em; font-variant-numeric: tabular-nums; color: #c99a1e;
+    }
+    ${ROW_SEL} [data-lm-kind=out]::after { opacity: .55; }
+    ${ROW_SEL} [data-lm-kind=missing]::after { color: #e05a5a; }
+  `;
 
   // ---------- navegação (o Moxfield é uma SPA) ----------
   function checkLocation() {

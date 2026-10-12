@@ -122,8 +122,9 @@ const moxDeck = {
   name: "Teste",
   boards: {
     mainboard: { cards: {
-      a: { quantity: 1, card: { name: "Swords to Plowshares", type_line: "Instant", layout: "normal" } },
-      b: { quantity: 9, card: { name: "Plains", type_line: "Basic Land — Plains", layout: "normal" } },
+      a: { quantity: 1, card: { id: "sw1", name: "Swords to Plowshares", type_line: "Instant", layout: "normal" } },
+      b: { quantity: 5, card: { id: "pl1", name: "Plains", type_line: "Basic Land — Plains", layout: "normal" } },
+      e: { quantity: 4, card: { id: "pl2", name: "Plains", type_line: "Basic Land — Plains", layout: "normal" } },
     } },
     commanders: { cards: { c: { quantity: 1, card: { name: "Giver of Runes", type_line: "Creature", layout: "normal" } } } },
     sideboard: { cards: { d: { quantity: 2, card: { name: "Rest in Peace", type_line: "Enchantment", layout: "normal" } } } },
@@ -134,7 +135,11 @@ test("flattenDeck separa boards e detecta básicos", () => {
   const d = L.flattenDeck(moxDeck);
   assert.equal(d.cards.length, 4);
   assert.equal(d.hasCommanders && d.hasSideboard && d.hasBasics, true);
-  assert.equal(d.cards.find((c) => c.name === "Plains").isBasic, true);
+  const plains = d.cards.find((c) => c.name === "Plains");
+  assert.equal(plains.isBasic, true);
+  // duas impressões do mesmo nome: uma entrada, quantidades somadas, os dois ids guardados
+  assert.equal(plains.quantity, 9);
+  assert.deepEqual(plains.ids, ["pl1", "pl2"]);
 });
 
 test("computeTotal respeita as opções (padrão DC500: só main, sem básicos)", () => {
@@ -153,4 +158,34 @@ test("isPriced: sideboard e comandante têm preço buscado mesmo fora do total",
   assert.equal(L.isPriced(by("Rest in Peace"), s), true);
   assert.equal(L.isPriced(by("Giver of Runes"), s), true);
   assert.equal(L.isPriced(by("Plains"), s), false);
+});
+
+test("findCard: casa a linha do Moxfield pelo id e, sem id, pelo nome", () => {
+  const cards = [
+    { name: "Lightning Bolt", board: "side", quantity: 1, ids: ["side1"] },
+    { name: "Lightning Bolt", board: "main", quantity: 2, ids: ["bolt1", "bolt2"] },
+    { name: "Valakut, the Molten Pinnacle", board: "main", quantity: 1, ids: ["PJwK3"] },
+    { name: "Delver of Secrets // Insectile Aberration", board: "main", quantity: 1 },
+  ];
+  const idx = L.indexDeck(cards);
+  // nome alternativo da impressão: só o id resolve
+  assert.equal(L.findCard(idx, "PJwK3", "Volcano of Roku's Island").name, "Valakut, the Molten Pinnacle");
+  assert.equal(L.findCard(idx, "bolt2", "Lightning Bolt").board, "main");
+  // sem id conhecido (snapshot antigo): pelo nome, preferindo o board que conta
+  assert.equal(L.findCard(idx, "zzz", "  Lightning   Bolt ").board, "main");
+  assert.equal(L.findCard(idx, undefined, "Delver of Secrets").name, "Delver of Secrets // Insectile Aberration");
+  assert.equal(L.findCard(idx, undefined, "Island"), undefined);
+});
+
+test("inlineLabel: preço da linha, fora do total, sem preço e sem etiqueta", () => {
+  const fmt = (v) => v.toFixed(2);
+  const s = { criterion: "min", includeBasics: false, includeCommanders: false, includeSideboard: false };
+  const entry = { status: "ok", prices: { min: 2.5, medium: 3, max: 4 } };
+  assert.deepEqual(L.inlineLabel({ board: "main" }, entry, 3, s, fmt), { text: "7.50", kind: "counted" });
+  assert.deepEqual(L.inlineLabel({ board: "side" }, entry, 1, s, fmt), { text: "2.50", kind: "out" });
+  assert.deepEqual(L.inlineLabel({ board: "main" }, { status: "notfound", prices: null }, 1, s, fmt),
+    { text: "sem preço", kind: "missing" });
+  assert.equal(L.inlineLabel({ board: "main" }, undefined, 1, s, fmt), null);          // ainda não buscado
+  assert.equal(L.inlineLabel({ board: "main", isBasic: true }, entry, 1, s, fmt), null); // básico fora da conta
+  assert.equal(L.inlineLabel(undefined, entry, 1, s, fmt), null);                      // carta fora do deck
 });

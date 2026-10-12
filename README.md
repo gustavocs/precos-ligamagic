@@ -44,6 +44,11 @@ issue neste repositório para conversarmos.
   do deck que sai precisa custar, no mínimo).
 - Ordenação por maior preço (padrão), menor preço ou nome.
 - ✎ em cada carta para informar um preço manual, que tem prioridade sobre a LigaMagic.
+- **Preços na lista do Moxfield**: mostra o preço de cada carta ao lado do nome, na própria
+  lista do deck, com o mesmo critério e as mesmas regras do painel (quantidade da linha,
+  sideboard e comandante mais apagados quando estão fora do total, "sem preço" em vermelho).
+  Funciona só na visualização em texto do Moxfield (**View** → **Text** ou **Condensed
+  Text**); em outra visualização, o painel avisa.
 - Cartas marcadas com "conferir" merecem uma olhada na página da LigaMagic: passe o mouse
   sobre a etiqueta para ver o motivo.
 - A LigaMagic atualiza os preços uma vez por dia, então o preço guardado vale até a virada
@@ -60,6 +65,8 @@ armazenamento local da extensão.
 ## Limitações conhecidas
 
 - Decks privados do Moxfield não são suportados.
+- Os preços na lista dependem da estrutura da página do Moxfield: se ela mudar, a opção
+  pode parar de mostrar os valores até uma atualização (o painel continua funcionando).
 - O painel não se atualiza sozinho ao editar o deck (por exemplo ao mudar cartas do sideboard para o main deck): clique em **Recalcular**.
 - Mudanças no layout da LigaMagic ou na API do Moxfield podem quebrar a extensão até uma atualização.
 

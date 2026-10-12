@@ -237,11 +237,13 @@ var LigaPrecos = (() => {
         const prev = byKey.get(key);
         if (prev) {
           prev.quantity += entry.quantity;
+          if (card.id && !prev.ids.includes(card.id)) prev.ids.push(card.id);
           continue;
         }
         byKey.set(key, {
           key, board,
           name: card.name,
+          ids: card.id ? [card.id] : [], // id da impressão no Moxfield (= data-hash da linha)
           quantity: entry.quantity,
           isBasic: isBasicLand(card),
           lookups: lookupNames(card),
@@ -287,7 +289,41 @@ var LigaPrecos = (() => {
     return { total: Math.round(total * 100) / 100, missing, pending };
   }
 
+  // ---------- Preços na lista do Moxfield ----------
+  // Nome como aparece no link da linha -> chave de comparação.
+  const normName = (s) => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+  // Índice para achar a carta do deck a partir de uma linha da lista do Moxfield.
+  // Pelo id da impressão (data-hash da linha) primeiro: impressões com nome alternativo
+  // (Universes Beyond, ex.: Valakut aparece como "Volcano of Roku's Island") só casam assim.
+  // Pelo nome como reserva (snapshots antigos, sem ids). Se a carta está em mais de um board,
+  // vale o que conta primeiro (main, companheiro, comandante, sideboard).
+  const BOARD_ORDER = { main: 0, companion: 1, commander: 2, side: 3 };
+  function indexDeck(cards) {
+    const sorted = [...cards].sort((a, b) => (BOARD_ORDER[a.board] ?? 9) - (BOARD_ORDER[b.board] ?? 9));
+    const byId = new Map(), byName = new Map();
+    const add = (map, k, c) => { if (k && !map.has(k)) map.set(k, c); };
+    for (const c of sorted) {
+      for (const id of c.ids || []) add(byId, id, c);
+      add(byName, normName(c.name), c);
+    }
+    for (const c of sorted) if (c.name.includes(" // ")) add(byName, normName(c.name.split(" // ")[0]), c);
+    return { byId, byName };
+  }
+  const findCard = (index, id, name) => (id && index.byId.get(id)) || index.byName.get(normName(name));
+
+  // Etiqueta ao lado do nome: { text, kind } ou null (sem etiqueta).
+  // kind: "counted" (entra no total), "out" (sideboard/comandante fora do total), "missing".
+  // qty = quantidade da linha no Moxfield; fmt = formatador de moeda.
+  function inlineLabel(card, entry, qty, settings, fmt) {
+    if (!card || !entry || !isPriced(card, settings)) return null;
+    const v = entry.prices?.[settings.criterion];
+    if (v == null) return { text: "sem preço", kind: "missing" };
+    return { text: fmt(v * qty), kind: isCounted(card, settings) ? "counted" : "out" };
+  }
+
   return {
+    normName, indexDeck, findCard, inlineLabel,
     parseBRL, pricesFromHTML, findEditions, pricesFromEditions, extractPrices,
     firstListingEdition, matchEdition, analyzeCardPage, isChallengePage, ligaUrl,
     deckIdFromPath, moxfieldDeckApi, lookupNames, isBasicLand,
