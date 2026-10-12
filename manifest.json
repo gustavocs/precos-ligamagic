@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Preços LigaMagic no Moxfield",
   "description": "Mostra o valor do deck no Moxfield com os preços da LigaMagic, com limite de orçamento opcional (ex.: Duel Commander 500).",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "permissions": ["storage", "scripting"],
   "host_permissions": [
     "https://www.ligamagic.com.br/*",
